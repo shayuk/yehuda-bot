@@ -42,10 +42,10 @@ question = st.text_input("מה תשאל את יהודה?")
 if question:
     st.session_state.chat_history.append({"role": "user", "content": question})
     with st.spinner("יהודה חושב..."):
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=st.session_state.chat_history
         )
-        answer = response["choices"][0]["message"]["content"]
+        answer = response.choices[0].message.content
         st.session_state.chat_history.append({"role": "assistant", "content": answer})
         st.experimental_rerun()
