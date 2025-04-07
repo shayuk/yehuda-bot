@@ -20,10 +20,7 @@ system_prompt = """
 """
 
 # --- יצירת Client של OpenAI ---
-from openai import OpenAI
-
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
 
 # --- ממשק משתמש ---
 st.set_page_config(layout="wide")
