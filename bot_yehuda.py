@@ -1,5 +1,5 @@
 import streamlit as st
-from openai import OpenAI
+import openai
 
 # --- הגדרת הפרופיל של החולה ---
 patient_profile = """
@@ -19,8 +19,7 @@ system_prompt = """
 אל תסטה מהנושא הרפואי, והתנהג באופן טבעי.
 """
 
-# --- יצירת Client חדש של OpenAI ---
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # --- ממשק משתמש ---
 st.set_page_config(layout="wide")
@@ -50,7 +49,7 @@ def generate_feedback(chat_history):
     השיחה:
     {chat_history}
     """
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": feedback_prompt}]
     )
@@ -65,11 +64,10 @@ if question:
         feedback = generate_feedback(st.session_state.chat_history)
         st.markdown("<div style='text-align: right;'><b>משוב:</b></div>", unsafe_allow_html=True)
         st.markdown(f"<div style='text-align: right;'>{feedback}</div>", unsafe_allow_html=True)
-        # ניתן לשמור את השיחה והמשוב כאן
     else:
         st.session_state.chat_history.append({"role": "user", "content": question})
         with st.spinner("יהודה חושב..."):
-            response = client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=st.session_state.chat_history
             )
