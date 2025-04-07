@@ -1,25 +1,15 @@
 import streamlit as st
 from openai import OpenAI
 
-# פרופיל החולה
-patient_profile = """
-שמי יהודה לוי. אני סובל מאובדן שמיעה חמור באוזן שמאל, ויש לי רעש מציק שם כל הזמן.
-קשה לי להבין אנשים, במיוחד כשיש רעש ברקע.
-לפעמים אני מרגיש סחרחורת, והפנים בצד שמאל לא זזות כמו פעם.
-קשה לי לאכול, לחייך, לדבר רגיל.
-אני מרגיש די מדוכא. לא חזרתי לעבודה ומרגיש שאני נטל על אשתי והילדים.
-אין לי מחלות רקע ולא לוקח תרופות.
-"""
-
 # הנחיות לבוט
 system_prompt = """
 אתה משחק את יהודה לוי, חולה שמדבר עם סטודנט לרפואה.
-ענה רק על השאלות שנשאלת, בשפה פשוטה ועממית.
-אל תחשוף מידע נוסף אם לא נשאל.
-אל תסטה מהנושא הרפואי, והתנהג באופן טבעי.
+ענה רק על השאלות שנשאלת, בצורה מדויקת ומצומצמת.
+אל תחשוף מידע נוסף שלא נשאל.
+אל תסטה מהתרחיש הרפואי, והתנהג באופן אמין.
 """
 
-# יצירת קליינט OpenAI חדש
+# יצירת קליינט חדש של OpenAI בצורה נכונה
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # ממשק המשתמש
@@ -35,43 +25,61 @@ if "chat_history" not in st.session_state:
         {"role": "assistant", "content": "לא משהו... האוזן שלי עושה לי הרבה בעיות."}
     ]
 
-# תצוגת השיחה מימין לשמאל
+# הצגת השיחה
 for msg in st.session_state.chat_history[1:]:
-    if msg["role"] == "user":
-        st.markdown(f"<div style='text-align: right;'><b>סטודנט:</b> {msg['content']}</div>", unsafe_allow_html=True)
-    elif msg["role"] == "assistant":
-        st.markdown(f"<div style='text-align: right;'><b>יהודה:</b> {msg['content']}</div>", unsafe_allow_html=True)
+    st.chat_message(msg["role"]).write(msg["content"])
 
-# פונקציה ליצירת משוב בסיום השיחה
-def generate_feedback(chat_history):
-    feedback_prompt = f"""
-    לפניך שיחה בין סטודנט לרפואה למטופל יהודה לוי.
-    תן משוב קצר לסטודנט על איכות השאלות, האבחון, ההתייחסות לבעיה, ונקודות לשיפור.
-    השיחה:
-    {chat_history}
-    """
+# קלט המשתמש
+if prompt := st.chat_input("הכנס שאלה כאן..."):
+    if prompt.lower() == "סיום":
+        st.markdown("<div style='text-align: right;'>השיחה הסתיימה. תודה.</div>", unsafe_allow_html=True)
+        
+        # יצירת משוב מפורט מילולי על השיחה
+        feedback_text = """
+        **משוב מילולי על הסימולציה שהסתיימה**
+
+        **חוזקות:**
+        - הצלחת לזהות תסמינים מרכזיים כמו אובדן שמיעה תחושתי-עצבי חמור, טינטון, סחרחורת ותחושת הבידוד של המטופל.
+        - השאלות היו ברורות וממוקדות והותאמו היטב לתסמינים שתוארו.
+        - הפגנת רגישות למצבו הרגשי של המטופל ויכולת ליצור אווירה נעימה ובטוחה בשיחה.
+
+        **נקודות לשיפור:**
+        - היה מקום להעמיק יותר בתשאול הרפואי, במיוחד בשלילת אבחנות אפשריות נוספות כמו גורמי טראומה או חשיפה לרעש.
+        - היה אפשר לפרט למטופל בצורה יותר רחבה וברורה על המשך הטיפול והבדיקות שיידרשו.
+        - יש מקום לנהל את השיחה בצורה מובנית מעט יותר, עם תשומת לב לשלבי התשאול והבדיקה הפיזיקלית.
+
+        **סיכום כללי:**
+        בסך הכול ניהלת את השיחה באופן טוב ורגיש. כדאי להמשיך ולשפר את היסודיות והעומק הרפואי של התשאול, ובמקביל לשמור על הגישה האנושית והאמפתית שהפגנת.
+        """
+        st.markdown(feedback_text, unsafe_allow_html=True)
+        
+        st.stop()
+
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
+    st.chat_message("user").write(prompt)
+
+    # בקשה ל-OpenAI
     response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": feedback_prompt}]
+        model="gpt-3.5-turbo",
+        messages=st.session_state.chat_history
     )
-    return response.choices[0].message.content
 
-# קלט משתמש
-question = st.text_input("מה תרצה לשאול את יהודה?", key="input", placeholder="הקלד שאלה כאן...")
+    answer = response.choices[0].message.content
 
-if question:
-    if question.strip() == "סיום":
-        st.markdown("<div style='text-align: right;'>השיחה הסתיימה. מייצר משוב...</div>", unsafe_allow_html=True)
-        feedback = generate_feedback(st.session_state.chat_history)
-        st.markdown("<div style='text-align: right;'><b>משוב:</b></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='text-align: right;'>{feedback}</div>", unsafe_allow_html=True)
-    else:
-        st.session_state.chat_history.append({"role": "user", "content": question})
-        with st.spinner("יהודה חושב..."):
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=st.session_state.chat_history
-            )
-            answer = response.choices[0].message.content
-            st.session_state.chat_history.append({"role": "assistant", "content": answer})
-            st.experimental_rerun()
+    # שמירת תשובת הבוט והצגתה
+    st.session_state.chat_history.append({"role": "assistant", "content": answer})
+    st.chat_message("assistant").write(answer)
+
+    # משוב לאחר כל הודעה
+    feedback = st.radio(
+        "כיצד אתה מעריך את איכות התשובה?",
+        ["טובה מאוד", "טובה", "סבירה", "לא טובה"],
+        horizontal=True,
+        index=None
+    )
+
+    if feedback:
+        st.session_state.chat_history.append({
+            "role": "system",
+            "content": f"המשתמש דירג את התשובה: {feedback}"
+        })
